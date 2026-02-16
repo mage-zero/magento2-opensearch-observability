@@ -101,7 +101,7 @@ class Driver implements DriverInterface
      * @param mixed $timerId
      * @param array<string, mixed>|null $tags
      */
-    public function start($timerId, array $tags = null): void
+    public function start($timerId, ?array $tags = null): void
     {
         if (!$this->enabled || $this->agent === null || $this->transaction === null) {
             return;

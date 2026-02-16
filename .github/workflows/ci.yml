@@ -53,6 +53,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
+      COMPOSER_AUDIT_BLOCK_INSECURE: "0"
+      COMPOSER_NO_AUDIT: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -95,6 +97,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
+      COMPOSER_AUDIT_BLOCK_INSECURE: "0"
+      COMPOSER_NO_AUDIT: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -143,6 +147,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       COMPOSER_AUTH: ${{ secrets.COMPOSER_AUTH }}
+      COMPOSER_AUDIT_BLOCK_INSECURE: "0"
+      COMPOSER_NO_AUDIT: "1"
     strategy:
       fail-fast: false
       matrix:
@@ -162,7 +168,7 @@ jobs:
         env:
           discovery.type: single-node
           xpack.security.enabled: false
-          ES_JAVA_OPTS: -Xms64m -Xmx512m
+          ES_JAVA_OPTS: -Xms64m -Xmx512m -XX:-UseContainerSupport
         options: --health-cmd="curl localhost:9200/_cluster/health?wait_for_status=yellow&timeout=60s" --health-interval=10s --health-timeout=5s --health-retries=3
     steps:
       - uses: actions/checkout@v4

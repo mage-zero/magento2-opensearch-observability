@@ -119,6 +119,8 @@ class Driver implements DriverInterface
      */
     public function stop($timerId): void
     {
+        $timerId = (string)$timerId;
+
         if (!$this->enabled || $this->agent === null) {
             return;
         }
@@ -141,6 +143,10 @@ class Driver implements DriverInterface
      */
     public function clear($timerId = null): void
     {
+        if ($timerId !== null) {
+            $timerId = (string)$timerId;
+        }
+
         self::$callStack = [];
     }
 

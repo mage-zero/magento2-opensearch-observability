@@ -33,7 +33,9 @@ class StderrEmitterTest extends TestCase
         ], 'exception.log');
 
         $lines = file($tempFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        @unlink($tempFile);
+        if (is_string($tempFile) && file_exists($tempFile)) {
+            unlink($tempFile);
+        }
 
         $this->assertIsArray($lines);
         $this->assertCount(1, $lines);
@@ -67,7 +69,9 @@ class StderrEmitterTest extends TestCase
         ], 'system.log');
 
         $contents = (string)file_get_contents($tempFile);
-        @unlink($tempFile);
+        if (is_string($tempFile) && file_exists($tempFile)) {
+            unlink($tempFile);
+        }
 
         $this->assertSame('', $contents);
     }
@@ -96,7 +100,9 @@ class StderrEmitterTest extends TestCase
         ], 'exception.log');
 
         $lines = file($tempFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-        @unlink($tempFile);
+        if (is_string($tempFile) && file_exists($tempFile)) {
+            unlink($tempFile);
+        }
 
         $this->assertIsArray($lines);
         $this->assertCount(1, $lines);

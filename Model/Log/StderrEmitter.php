@@ -57,31 +57,22 @@ class StderrEmitter
             return;
         }
 
-        if (!$this->isAllowedByLevel($record)) {
+        $level = $this->extractLevel($record);
+        if (!$this->isAllowedByLevel($level)) {
             return;
         }
 
-        $payload = [
-            '@timestamp' => $this->extractTimestamp($record),
-            'message' => isset($record['message']) ? (string)$record['message'] : '',
-            'log.level' => $this->extractLevelName($record),
-            'magento.log_file' => $logFile,
-            'magento.channel' => isset($record['channel']) ? (string)$record['channel'] : 'main',
-            'context' => isset($record['context']) && is_array($record['context']) ? $record['context'] : [],
-            'extra' => isset($record['extra']) && is_array($record['extra']) ? $record['extra'] : [],
-        ];
-
-        $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        if ($encoded === false) {
+        $payload = $this->buildPayload($record, $logFile, $level);
+        $encoded = $this->encodePayload($payload);
+        if ($encoded === null) {
             return;
         }
 
-        if ($this->config->isDirectLogStreamEnabled()) {
+        if (!$this->config->isDirectLogStreamEnabled()) {
+            $this->emitToStderr($encoded);
+        } else {
             $this->emitToDirectEndpoint($encoded);
-            return;
         }
-
-        $this->emitToStderr($encoded);
     }
 
     private function emitToStderr(string $encoded): void
@@ -151,7 +142,17 @@ class StderrEmitter
             return $this->streamHandle;
         }
 
-        $handle = @fopen($this->streamPath, 'ab');
+        set_error_handler(
+            static function (int $severity, string $message): bool {
+                return true;
+            }
+        );
+        try {
+            $handle = fopen($this->streamPath, 'ab');
+        } finally {
+            restore_error_handler();
+        }
+
         if ($handle === false) {
             return null;
         }
@@ -164,10 +165,9 @@ class StderrEmitter
     /**
      * @param array<string, mixed> $record
      */
-    private function isAllowedByLevel(array $record): bool
+    private function isAllowedByLevel(int $recordLevel): bool
     {
         $minLevel = $this->levelToInt($this->config->getLogStreamMinLevel());
-        $recordLevel = $this->extractLevel($record);
 
         return $recordLevel >= $minLevel;
     }
@@ -177,31 +177,14 @@ class StderrEmitter
      */
     private function extractLevel(array $record): int
     {
-        if (isset($record['level']) && is_numeric($record['level'])) {
-            return (int)$record['level'];
+        $numericLevel = $this->extractNumericLevel($record);
+        if ($numericLevel !== null) {
+            return $numericLevel;
         }
 
-        if (isset($record['level']) && is_object($record['level'])) {
-            $level = $record['level'];
-            if (property_exists($level, 'value') && is_numeric($level->value)) {
-                return (int)$level->value;
-            }
-        }
-
-        if (isset($record['level_name'])) {
-            return $this->levelToInt((string)$record['level_name']);
-        }
-
-        if (isset($record['level']) && is_object($record['level'])) {
-            $level = $record['level'];
-
-            if (method_exists($level, 'getName')) {
-                return $this->levelToInt((string)$level->getName());
-            }
-
-            if (property_exists($level, 'name')) {
-                return $this->levelToInt((string)$level->name);
-            }
+        $levelName = $this->extractLevelName($record);
+        if ($levelName !== '') {
+            return $this->levelToInt($levelName);
         }
 
         return 200;
@@ -258,5 +241,93 @@ class StderrEmitter
         }
 
         return 'info';
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function buildPayload(array $record, string $logFile, int $level): array
+    {
+        return [
+            '@timestamp' => $this->extractTimestamp($record),
+            'message' => $this->extractMessage($record),
+            'log.level' => $this->extractLevelName($record),
+            'log.level_num' => $level,
+            'magento.log_file' => $logFile,
+            'magento.channel' => $this->extractChannel($record),
+            'context' => $this->extractArrayField($record, 'context'),
+            'extra' => $this->extractArrayField($record, 'extra'),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function extractMessage(array $record): string
+    {
+        if (!isset($record['message'])) {
+            return '';
+        }
+
+        return (string)$record['message'];
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function extractChannel(array $record): string
+    {
+        if (!isset($record['channel'])) {
+            return 'main';
+        }
+
+        return (string)$record['channel'];
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     * @return array<string, mixed>
+     */
+    private function extractArrayField(array $record, string $key): array
+    {
+        if (!isset($record[$key]) || !is_array($record[$key])) {
+            return [];
+        }
+
+        return $record[$key];
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function extractNumericLevel(array $record): ?int
+    {
+        if (isset($record['level']) && is_numeric($record['level'])) {
+            return (int)$record['level'];
+        }
+
+        if (!isset($record['level']) || !is_object($record['level'])) {
+            return null;
+        }
+
+        $level = $record['level'];
+        if (property_exists($level, 'value') && is_numeric($level->value)) {
+            return (int)$level->value;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function encodePayload(array $payload): ?string
+    {
+        $encoded = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if (!is_string($encoded)) {
+            return null;
+        }
+
+        return $encoded;
     }
 }

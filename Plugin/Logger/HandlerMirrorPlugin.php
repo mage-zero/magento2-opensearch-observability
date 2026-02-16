@@ -6,13 +6,12 @@ namespace MageZero\OpensearchObservability\Plugin\Logger;
 
 use MageZero\OpensearchObservability\Model\Config;
 use MageZero\OpensearchObservability\Model\Log\StderrEmitter;
+use Magento\Framework\Logger\Handler\Debug as DebugHandler;
+use Magento\Framework\Logger\Handler\Exception as ExceptionHandler;
+use Magento\Framework\Logger\Handler\System as SystemHandler;
 
 class HandlerMirrorPlugin
 {
-    private const SYSTEM_HANDLER = 'Magento\\Framework\\Logger\\Handler\\System';
-    private const DEBUG_HANDLER = 'Magento\\Framework\\Logger\\Handler\\Debug';
-    private const EXCEPTION_HANDLER = 'Magento\\Framework\\Logger\\Handler\\Exception';
-
     /**
      * @var Config
      */
@@ -90,17 +89,15 @@ class HandlerMirrorPlugin
      */
     private function resolveLogFile($subject): string
     {
-        $handlerClass = get_class($subject);
-
-        if ($handlerClass === self::SYSTEM_HANDLER) {
+        if ($subject instanceof SystemHandler) {
             return 'system.log';
         }
 
-        if ($handlerClass === self::DEBUG_HANDLER) {
+        if ($subject instanceof DebugHandler) {
             return 'debug.log';
         }
 
-        if ($handlerClass === self::EXCEPTION_HANDLER) {
+        if ($subject instanceof ExceptionHandler) {
             return 'exception.log';
         }
 

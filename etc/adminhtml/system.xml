@@ -1,0 +1,182 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <tab id="magezero" translate="label" sortOrder="500">
+            <label>MageZero</label>
+        </tab>
+
+        <section id="magezero" translate="label" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+            <label>MageZero Settings</label>
+            <tab>magezero</tab>
+            <resource>MageZero_OpensearchObservability::config</resource>
+
+            <group id="observability" translate="label comment" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Observability Settings</label>
+                <comment><![CDATA[OpenSearch observability integration options for APM and optional log streaming.]]></comment>
+
+                <field id="apm_enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable APM Integration</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Disabled by default. Enable to allow Elastic APM transaction/span publishing.</comment>
+                </field>
+
+                <field id="apm_server_url" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>APM Server URL</label>
+                    <comment>Example: http://apm-server:8200</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_service_name" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>APM Service Name</label>
+                    <comment>Optional override. If empty, hostname/request host is used.</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_environment" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>APM Environment</label>
+                    <comment>Example: production, staging, development.</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_secret_token" translate="label comment" type="obscure" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>APM Secret Token</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment>Optional token for secured APM endpoints.</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_transaction_sample_rate" translate="label comment" type="text" sortOrder="60" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>APM Transaction Sample Rate</label>
+                    <comment>Decimal 0..1 (for example 0.5 = 50% sampling).</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_stack_trace_limit" translate="label comment" type="text" sortOrder="70" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>APM Stack Trace Limit</label>
+                    <comment>Maximum frames captured for traces (default 1000).</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_timeout" translate="label comment" type="text" sortOrder="80" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>APM Timeout (seconds)</label>
+                    <comment>Request timeout for APM payload transport (default 10).</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_db_profiler_enabled" translate="label comment" type="select" sortOrder="90" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable DB Query Span Support</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enables DB span class usage when Magento DB profiler is configured.</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_enabled" translate="label comment" type="select" sortOrder="100" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Enable Log Streaming</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Disabled by default. When enabled, selected Magento logs are mirrored as structured JSON.</comment>
+                </field>
+
+                <field id="log_stream_transport" translate="label comment" type="select" sortOrder="110" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Log Transport</label>
+                    <source_model>MageZero\OpensearchObservability\Model\Config\Source\LogTransport</source_model>
+                    <comment>Choose STDERR (collector-managed) or direct HTTP shipping.</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_min_level" translate="label comment" type="select" sortOrder="120" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Log Stream Minimum Level</label>
+                    <source_model>MageZero\OpensearchObservability\Model\Config\Source\LogLevel</source_model>
+                    <comment>Records below this level are not mirrored.</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_direct_url" translate="label comment" type="text" sortOrder="130" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Direct Log Endpoint Base URL</label>
+                    <comment>Example: https://opensearch.example.com:9200</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                        <field id="log_stream_transport">direct</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_direct_index" translate="label comment" type="text" sortOrder="140" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Direct Log Index</label>
+                    <comment>Target OpenSearch/Elasticsearch index name for logs.</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                        <field id="log_stream_transport">direct</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_direct_api_key" translate="label comment" type="obscure" sortOrder="150" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Direct Log API Key (Optional)</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment>If set, sent as Authorization: ApiKey ... and takes precedence over username/password.</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                        <field id="log_stream_transport">direct</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_direct_username" translate="label comment" type="text" sortOrder="160" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Direct Log Username (Optional)</label>
+                    <comment>Used only when API key is empty.</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                        <field id="log_stream_transport">direct</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_direct_password" translate="label comment" type="obscure" sortOrder="170" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Direct Log Password (Optional)</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment>Used only when API key is empty and username is set.</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                        <field id="log_stream_transport">direct</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_direct_timeout_ms" translate="label comment" type="text" sortOrder="180" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Direct Log Timeout (ms)</label>
+                    <comment>Fail-open timeout for each direct log request (default 500).</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                        <field id="log_stream_transport">direct</field>
+                    </depends>
+                </field>
+
+                <field id="log_stream_direct_verify_tls" translate="label comment" type="select" sortOrder="190" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Verify TLS Certificates</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Disable only for controlled development environments using self-signed certificates.</comment>
+                    <depends>
+                        <field id="log_stream_enabled">1</field>
+                        <field id="log_stream_transport">direct</field>
+                    </depends>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

@@ -82,6 +82,7 @@ class StderrEmitter
             return;
         }
 
+        // phpcs:ignore Magento2.Functions.DiscouragedFunction.DiscouragedWithAlternative
         fwrite($stream, $encoded . PHP_EOL);
     }
 
@@ -142,12 +143,11 @@ class StderrEmitter
             return $this->streamHandle;
         }
 
-        set_error_handler(
-            static function (int $severity, string $message): bool {
-                return true;
-            }
-        );
+        set_error_handler(static function (): bool {
+            return true;
+        });
         try {
+            // phpcs:ignore Magento2.Functions.DiscouragedFunction.DiscouragedWithAlternative
             $handle = fopen($this->streamPath, 'ab');
         } finally {
             restore_error_handler();

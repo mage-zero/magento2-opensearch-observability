@@ -56,6 +56,7 @@ class Driver implements DriverInterface
         $this->init();
 
         if ($this->enabled) {
+            // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
             register_shutdown_function([$this, 'send']);
         }
     }
@@ -72,6 +73,7 @@ class Driver implements DriverInterface
 
             /** @var AgentOptionsBuilder $optionsBuilder */
             $optionsBuilder = $objectManager->get(AgentOptionsBuilder::class);
+            // phpcs:ignore Magento2.Security.Superglobal.SuperglobalUsageWarning
             $options = $optionsBuilder->build($_SERVER);
             $this->applyDriverOverrides($options);
 
@@ -202,7 +204,9 @@ class Driver implements DriverInterface
 
     private function resolveTransactionName(): string
     {
+        // phpcs:ignore Magento2.Security.Superglobal.SuperglobalUsageWarning
         $method = isset($_SERVER['REQUEST_METHOD']) ? (string)$_SERVER['REQUEST_METHOD'] : 'GET';
+        // phpcs:ignore Magento2.Security.Superglobal.SuperglobalUsageWarning
         $uri = isset($_SERVER['REQUEST_URI']) ? (string)$_SERVER['REQUEST_URI'] : '/';
 
         return trim($method . ' ' . $uri);

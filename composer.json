@@ -2,7 +2,7 @@
   "name": "mage-zero/magento2-opensearch-observability",
   "description": "OpenSearch-focused observability module for Magento 2 with APM and optional stderr log streaming",
   "type": "magento2-module",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": [
     "OSL-3.0"
   ],

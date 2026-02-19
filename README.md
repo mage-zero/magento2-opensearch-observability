@@ -70,11 +70,44 @@ Go to `Stores > Configuration > MageZero > Observability Settings`.
 
 ## Enabling APM Tracing
 
-APM integration is implemented as a Magento profiler driver. After enabling APM in admin config, enable the profiler driver:
+APM integration is implemented as a Magento profiler driver.
+
+Profiler activation is required. If profiler is not enabled, no request traces are emitted.
+
+### 1. Configure APM options
+
+You can configure APM options in either location:
+
+- Magento config (`Stores > Configuration > MageZero > Observability Settings`)
+- Optional bootstrap file `app/etc/apm.php` (legacy-compatible, loaded very early)
+
+Example `app/etc/apm.php`:
+
+```php
+<?php
+return [
+    'serverUrl' => 'http://apm-server:8200',
+    'enabled' => true,
+    'transactionSampleRate' => 1.0,
+    'serviceName' => 'magento',
+    'hostname' => 'app-node',
+    'environment' => 'production',
+    'stackTraceLimit' => 1000,
+    'timeout' => 10,
+];
+```
+
+When both sources are present and the module APM switch is enabled, module config values are used; `app/etc/apm.php` remains an early-boot fallback.
+
+### 2. Enable profiler driver
+
+Enable the profiler driver with:
 
 ```bash
 bin/magento dev:profiler:enable '{"drivers":[{"type":"MageZero\\OpensearchObservability\\Profiler\\Driver"}]}'
 ```
+
+This writes `var/profiler.flag` and activates the driver for web requests.
 
 To disable:
 

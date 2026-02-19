@@ -91,22 +91,27 @@ class DatadogHookRegistrar
 
     private function applyRuntimeDatadogConfig(): void
     {
-        // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
-        @ini_set('datadog.trace.enabled', '1');
-
-        // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
-        @ini_set('datadog.trace.sample_rate', (string)$this->config->getTransactionSampleRate());
+        $this->applyIniSetting('datadog.trace.enabled', '1');
+        $this->applyIniSetting('datadog.trace.sample_rate', (string)$this->config->getTransactionSampleRate());
 
         $serviceName = $this->config->getResolvedServiceName();
         if ($serviceName !== '') {
-            // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
-            @ini_set('datadog.service', $serviceName);
+            $this->applyIniSetting('datadog.service', $serviceName);
         }
 
         $environment = $this->config->getApmEnvironment();
         if ($environment !== '') {
+            $this->applyIniSetting('datadog.env', $environment);
+        }
+    }
+
+    private function applyIniSetting(string $name, string $value): void
+    {
+        try {
             // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
-            @ini_set('datadog.env', $environment);
+            ini_set($name, $value);
+        } catch (Throwable $exception) {
+            // No-op. Observability must be fail-open.
         }
     }
 
@@ -180,6 +185,12 @@ class DatadogHookRegistrar
 
     private function registerDiSpans(): void
     {
+        $this->registerDiCreateSpan();
+        $this->registerDiGetSpan();
+    }
+
+    private function registerDiCreateSpan(): void
+    {
         $self = $this;
         $this->registerMethodHook(
             'Magento\\Framework\\ObjectManager\\ObjectManager',
@@ -198,7 +209,11 @@ class DatadogHookRegistrar
                 ]);
             }
         );
+    }
 
+    private function registerDiGetSpan(): void
+    {
+        $self = $this;
         $this->registerMethodHook(
             'Magento\\Framework\\ObjectManager\\ObjectManager',
             'get',
@@ -219,50 +234,74 @@ class DatadogHookRegistrar
      * @param mixed $span
      * @param array<string, string> $meta
      */
-    private function decorateSpan($span, string $name, array $meta): void
+    protected function decorateSpan($span, string $name, array $meta): void
     {
         if (!is_object($span)) {
             return;
         }
 
         try {
-            if (property_exists($span, 'name')) {
-                $span->name = $name;
-            }
-            if (property_exists($span, 'resource')) {
-                $span->resource = $name;
-            }
-            if (property_exists($span, 'type')) {
-                $span->type = 'custom';
-            }
-            if (property_exists($span, 'service')) {
-                $serviceName = $this->config->getResolvedServiceName();
-                if ($serviceName !== '') {
-                    $span->service = $serviceName;
-                }
-            }
-
-            $spanMeta = [];
-            if (isset($span->meta) && is_array($span->meta)) {
-                $spanMeta = $span->meta;
-            }
-
-            $spanMeta['component'] = 'magento';
-            $spanMeta['magento.module'] = 'MageZero_OpensearchObservability';
-            $spanMeta['magento.version'] = $this->magentoVersion;
-            $spanMeta['deployment.environment'] = $this->config->getApmEnvironment();
-
-            foreach ($meta as $key => $value) {
-                $spanMeta[$key] = (string)$value;
-            }
-
-            $span->meta = $spanMeta;
+            $this->assignSpanIdentity($span, $name);
+            $span->meta = $this->buildSpanMeta($span, $meta);
         } catch (Throwable $exception) {
             // No-op. Observability must be fail-open.
         }
     }
 
-    private function resolveObserverCount(string $eventName): int
+    /**
+     * @param object $span
+     */
+    private function assignSpanIdentity($span, string $name): void
+    {
+        $serviceName = $this->config->getResolvedServiceName();
+        $fields = [
+            'name' => $name,
+            'resource' => $name,
+            'type' => 'custom',
+        ];
+        if ($serviceName !== '') {
+            $fields['service'] = $serviceName;
+        }
+
+        foreach ($fields as $field => $value) {
+            if (!property_exists($span, $field)) {
+                continue;
+            }
+
+            $span->{$field} = $value;
+        }
+    }
+
+    /**
+     * @param object $span
+     * @param array<string, string> $meta
+     * @return array<string, string>
+     */
+    private function buildSpanMeta($span, array $meta): array
+    {
+        $spanMeta = [];
+        if (isset($span->meta) && is_array($span->meta)) {
+            $spanMeta = $span->meta;
+        }
+
+        $baseMeta = [
+            'component' => 'magento',
+            'magento.module' => 'MageZero_OpensearchObservability',
+            'magento.version' => $this->magentoVersion,
+            'deployment.environment' => $this->config->getApmEnvironment(),
+        ];
+        foreach ($meta as $key => $value) {
+            $baseMeta[$key] = (string)$value;
+        }
+
+        foreach ($baseMeta as $key => $value) {
+            $spanMeta[$key] = (string)$value;
+        }
+
+        return $spanMeta;
+    }
+
+    protected function resolveObserverCount(string $eventName): int
     {
         if ($eventName === '') {
             return 0;

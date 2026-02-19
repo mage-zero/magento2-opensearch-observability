@@ -24,6 +24,7 @@ class BootstrapTracingPlugin
      */
     public function beforeRun(\Magento\Framework\App\Bootstrap $subject, $application): array
     {
+        unset($subject);
         $this->hookRegistrar->register();
 
         return [$application];

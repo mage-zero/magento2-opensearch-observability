@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace MageZero\OpensearchObservability\Test\Unit\Model\Apm;
 
-use MageZero\OpensearchObservability\Model\Apm\DatadogHookRegistrar;
 use MageZero\OpensearchObservability\Model\Config;
 use Magento\Framework\App\ProductMetadataInterface;
 use Magento\Framework\Event\ConfigInterface as EventConfigInterface;
@@ -108,29 +107,5 @@ class DatadogHookRegistrarTest extends TestCase
         $productMetadata->method('getVersion')->willReturn('2.4.8-p3');
 
         return new InspectableDatadogHookRegistrar($config, $eventConfig, $productMetadata);
-    }
-}
-
-class InspectableDatadogHookRegistrar extends DatadogHookRegistrar
-{
-    /**
-     * @var bool
-     */
-    public $traceMethodAvailable = true;
-
-    /**
-     * @var array<int, string>
-     */
-    public $hooks = [];
-
-    protected function isTraceMethodAvailable(): bool
-    {
-        return $this->traceMethodAvailable;
-    }
-
-    protected function registerMethodHook(string $className, string $methodName, callable $hook): bool
-    {
-        $this->hooks[] = $className . '::' . $methodName;
-        return true;
     }
 }

@@ -3,8 +3,12 @@
 `mage-zero/magento2-opensearch-observability` is an observability module for Magento 2.
 
 It provides:
-- OpenTelemetry OTLP transaction/span emission for Magento request profiling.
-- Optional DB query spans (when Magento DB profiler is enabled).
+- Datadog (`ddtrace`) userland hook registration for Magento-specific spans.
+- Configurable custom spans for:
+  - event dispatch,
+  - layout rendering,
+  - plugin lookup (optional), and
+  - DI object manager calls (optional).
 - Optional Magento log streaming as structured JSON via:
   - `stderr` (collector-managed), or
   - direct HTTP push to OpenSearch/Elasticsearch.
@@ -51,88 +55,45 @@ Go to `Stores > Configuration > MageZero > Observability Settings`.
 
 ### Feature Switches
 
-- `Enable APM Integration` (default: `No`)
+- `Enable Datadog Custom Spans` (default: `No`)
 - `Enable Log Streaming` (default: `No`)
 
 ### Shared/Operational Settings
 
-- OTLP traces endpoint URL
 - Service name override
 - Environment
-- Secret token (encrypted in config storage)
 - Transaction sample rate
-- Stack trace limit
-- Timeout
-- DB query span support
+- Event/layout/plugin/DI custom span toggles
 - Log transport (`stderr` or `direct`)
 - Log stream minimum level
 - Direct endpoint URL/index/auth/timeout/TLS settings
 
 ## Enabling Trace Emission
 
-Tracing integration is implemented as a Magento profiler driver.
+Tracing now uses `dd-trace-php` as the runtime tracer. This module only registers Magento-specific custom spans.
 
-Profiler activation is required. If profiler is not enabled, no request traces are emitted.
+### 1. Install and enable ddtrace extension
 
-### 1. Configure tracing options
+Install Datadog tracer for the target PHP runtime (package or PECL, depending on your build process) and ensure the extension is loaded in PHP-FPM/CLI workers that execute Magento.
 
-You can configure tracing options in either location:
+### 2. Configure tracer runtime environment
 
-- Magento config (`Stores > Configuration > MageZero > Observability Settings`)
-- Optional bootstrap file `app/etc/apm.php` (legacy-compatible, loaded very early)
+Set Datadog tracer variables in your runtime:
 
-Example `app/etc/apm.php`:
+- `DD_TRACE_ENABLED=1`
+- `DD_TRACE_AGENT_URL=http://<collector-or-agent>:8126`
+- `DD_SERVICE=<service-name>`
+- `DD_ENV=<environment>`
+- `DD_TRACE_SAMPLE_RATE=<0..1>`
 
-```php
-<?php
-return [
-    'serverUrl' => 'http://otel-collector:4318/v1/traces',
-    'enabled' => true,
-    'transactionSampleRate' => 1.0,
-    'serviceName' => 'magento',
-    'hostname' => 'app-node',
-    'environment' => 'production',
-    'stackTraceLimit' => 1000,
-    'timeout' => 10,
-];
-```
+### 3. Enable module custom spans
 
-When both sources are present and the module tracing switch is enabled, module config values are used; `app/etc/apm.php` remains an early-boot fallback.
+In Magento admin (`Stores > Configuration > MageZero > Observability Settings`):
 
-### 2. Enable profiler driver
+- Enable `Datadog Custom Spans`
+- Toggle event/layout/plugin/DI spans as needed
 
-Enable the profiler driver with:
-
-```bash
-bin/magento dev:profiler:enable '{"drivers":[{"type":"MageZero\\OpensearchObservability\\Profiler\\Driver"}]}'
-```
-
-This writes `var/profiler.flag` and activates the driver for web requests.
-
-To disable:
-
-```bash
-bin/magento dev:profiler:disable
-```
-
-## Optional DB Query Spans
-
-1. Enable `Enable DB Query Span Support` in admin config.
-2. Configure Magento DB profiler class in `app/etc/env.php`:
-
-```php
-'db' => [
-    'connection' => [
-        'default' => [
-            // ...
-            'profiler' => [
-                'class' => '\\MageZero\\OpensearchObservability\\Profiler\\Db',
-                'enabled' => true,
-            ],
-        ],
-    ],
-],
-```
+No Magento profiler driver bootstrap is required.
 
 ## Log Streaming Output Format
 
@@ -172,4 +133,4 @@ See `.github/workflows/ci.yml` for the matrix and job definitions.
 
 ## Credits
 
-This module builds on ideas from the Magento profiling ecosystem and OpenTelemetry/OTLP span modeling patterns.
+This module builds on Magento observability patterns and Datadog tracer userland hook capabilities.

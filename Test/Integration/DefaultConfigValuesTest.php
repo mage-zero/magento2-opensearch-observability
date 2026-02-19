@@ -24,7 +24,6 @@ class DefaultConfigValuesTest extends TestCase
     public function testFeatureSwitchesAreDisabledByDefault(): void
     {
         $this->assertSame('0', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_ENABLED));
-        $this->assertSame('0', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_DB_PROFILER_ENABLED));
         $this->assertSame('0', (string)$this->scopeConfig->getValue(Config::XML_PATH_LOG_STREAM_ENABLED));
     }
 
@@ -32,7 +31,10 @@ class DefaultConfigValuesTest extends TestCase
     {
         $this->assertSame('production', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_ENVIRONMENT));
         $this->assertSame('1.0', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_TRANSACTION_SAMPLE_RATE));
-        $this->assertSame('1000', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_STACK_TRACE_LIMIT));
+        $this->assertSame('1', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_SPAN_EVENTS_ENABLED));
+        $this->assertSame('1', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_SPAN_LAYOUT_ENABLED));
+        $this->assertSame('0', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_SPAN_PLUGINS_ENABLED));
+        $this->assertSame('0', (string)$this->scopeConfig->getValue(Config::XML_PATH_APM_SPAN_DI_ENABLED));
     }
 
     public function testLogStreamingTransportDefaultsAreDefined(): void

@@ -2,6 +2,14 @@
 
 All notable changes to `mage-zero/magento2-opensearch-observability` are documented in this file.
 
+## [2.0.0] - 2026-02-19
+
+- feat(apm): replace profiler-driver OTLP emitter with Datadog ddtrace hook registration at Magento bootstrap.
+- feat(apm): add configurable custom span coverage for event dispatch, layout rendering, plugin lookup, and DI object manager calls.
+- breaking(apm): remove profiler-driver classes, DB profiler integration, and `app/etc/apm.php` bootstrap fallback.
+- docs: rewrite APM docs/admin wording for Datadog tracer runtime model.
+- test: replace profiler/OTLP unit coverage with Datadog hook registrar coverage.
+
 ## [1.1.0] - 2026-02-19
 
 - feat(tracing): switch profiler transport from Elastic APM intake to OpenTelemetry OTLP trace payloads.

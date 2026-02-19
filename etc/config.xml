@@ -5,14 +5,13 @@
         <magezero>
             <observability>
                 <apm_enabled>0</apm_enabled>
-                <apm_server_url></apm_server_url>
                 <apm_service_name></apm_service_name>
                 <apm_environment>production</apm_environment>
-                <apm_secret_token></apm_secret_token>
                 <apm_transaction_sample_rate>1.0</apm_transaction_sample_rate>
-                <apm_stack_trace_limit>1000</apm_stack_trace_limit>
-                <apm_timeout>10</apm_timeout>
-                <apm_db_profiler_enabled>0</apm_db_profiler_enabled>
+                <apm_span_events_enabled>1</apm_span_events_enabled>
+                <apm_span_layout_enabled>1</apm_span_layout_enabled>
+                <apm_span_plugins_enabled>0</apm_span_plugins_enabled>
+                <apm_span_di_enabled>0</apm_span_di_enabled>
                 <log_stream_enabled>0</log_stream_enabled>
                 <log_stream_min_level>warning</log_stream_min_level>
                 <log_stream_transport>stderr</log_stream_transport>

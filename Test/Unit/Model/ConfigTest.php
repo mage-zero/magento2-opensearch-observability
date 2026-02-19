@@ -17,7 +17,10 @@ class ConfigTest extends TestCase
         $config = new Config($scopeConfig, $this->buildEncryptor());
 
         $this->assertFalse($config->isApmEnabled());
-        $this->assertFalse($config->isDbProfilerEnabled());
+        $this->assertFalse($config->isApmSpanEventsEnabled());
+        $this->assertFalse($config->isApmSpanLayoutEnabled());
+        $this->assertFalse($config->isApmSpanPluginsEnabled());
+        $this->assertFalse($config->isApmSpanDiEnabled());
         $this->assertFalse($config->isLogStreamingEnabled());
         $this->assertSame('warning', $config->getLogStreamMinLevel());
         $this->assertSame('stderr', $config->getLogStreamTransport());
@@ -61,19 +64,20 @@ class ConfigTest extends TestCase
         $this->assertSame('warning', $config->getLogStreamMinLevel());
     }
 
-    public function testSecretTokenIsDecryptedWhenStoredEncrypted(): void
+    public function testSpanFlagsRespectConfiguredValues(): void
     {
-        $scopeConfig = $this->buildScopeConfig([
-            Config::XML_PATH_APM_SECRET_TOKEN => 'encrypted-token',
-        ], []);
+        $scopeConfig = $this->buildScopeConfig([], [
+            Config::XML_PATH_APM_SPAN_EVENTS_ENABLED => true,
+            Config::XML_PATH_APM_SPAN_LAYOUT_ENABLED => false,
+            Config::XML_PATH_APM_SPAN_PLUGINS_ENABLED => true,
+            Config::XML_PATH_APM_SPAN_DI_ENABLED => false,
+        ]);
+        $config = new Config($scopeConfig, $this->buildEncryptor());
 
-        $encryptor = $this->createMock(EncryptorInterface::class);
-        $encryptor->method('decrypt')
-            ->with('encrypted-token')
-            ->willReturn('decrypted-token');
-
-        $config = new Config($scopeConfig, $encryptor);
-        $this->assertSame('decrypted-token', $config->getApmSecretToken());
+        $this->assertTrue($config->isApmSpanEventsEnabled());
+        $this->assertFalse($config->isApmSpanLayoutEnabled());
+        $this->assertTrue($config->isApmSpanPluginsEnabled());
+        $this->assertFalse($config->isApmSpanDiEnabled());
     }
 
     public function testLogTransportFallsBackToStderrWhenInvalid(): void

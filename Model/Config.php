@@ -10,14 +10,13 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 class Config
 {
     public const XML_PATH_APM_ENABLED = 'magezero/observability/apm_enabled';
-    public const XML_PATH_APM_SERVER_URL = 'magezero/observability/apm_server_url';
     public const XML_PATH_APM_SERVICE_NAME = 'magezero/observability/apm_service_name';
     public const XML_PATH_APM_ENVIRONMENT = 'magezero/observability/apm_environment';
-    public const XML_PATH_APM_SECRET_TOKEN = 'magezero/observability/apm_secret_token';
     public const XML_PATH_APM_TRANSACTION_SAMPLE_RATE = 'magezero/observability/apm_transaction_sample_rate';
-    public const XML_PATH_APM_STACK_TRACE_LIMIT = 'magezero/observability/apm_stack_trace_limit';
-    public const XML_PATH_APM_TIMEOUT = 'magezero/observability/apm_timeout';
-    public const XML_PATH_APM_DB_PROFILER_ENABLED = 'magezero/observability/apm_db_profiler_enabled';
+    public const XML_PATH_APM_SPAN_EVENTS_ENABLED = 'magezero/observability/apm_span_events_enabled';
+    public const XML_PATH_APM_SPAN_LAYOUT_ENABLED = 'magezero/observability/apm_span_layout_enabled';
+    public const XML_PATH_APM_SPAN_PLUGINS_ENABLED = 'magezero/observability/apm_span_plugins_enabled';
+    public const XML_PATH_APM_SPAN_DI_ENABLED = 'magezero/observability/apm_span_di_enabled';
 
     public const XML_PATH_LOG_STREAM_ENABLED = 'magezero/observability/log_stream_enabled';
     public const XML_PATH_LOG_STREAM_MIN_LEVEL = 'magezero/observability/log_stream_min_level';
@@ -32,8 +31,6 @@ class Config
 
     private const DEFAULT_APM_ENVIRONMENT = 'production';
     private const DEFAULT_SAMPLE_RATE = 1.0;
-    private const DEFAULT_STACK_TRACE_LIMIT = 1000;
-    private const DEFAULT_TIMEOUT_SECONDS = 10;
     private const DEFAULT_LOG_MIN_LEVEL = 'warning';
     private const DEFAULT_LOG_STREAM_TRANSPORT = 'stderr';
     private const DEFAULT_LOG_STREAM_DIRECT_INDEX = 'magento-observability-logs';
@@ -63,21 +60,11 @@ class Config
         return $this->isFlag(self::XML_PATH_APM_ENABLED);
     }
 
-    public function getApmServerUrl(): string
-    {
-        return trim($this->getString(self::XML_PATH_APM_SERVER_URL));
-    }
-
     public function getApmEnvironment(): string
     {
         $environment = trim($this->getString(self::XML_PATH_APM_ENVIRONMENT, self::DEFAULT_APM_ENVIRONMENT));
 
         return $environment !== '' ? $environment : self::DEFAULT_APM_ENVIRONMENT;
-    }
-
-    public function getApmSecretToken(): string
-    {
-        return $this->getDecryptedString(self::XML_PATH_APM_SECRET_TOKEN);
     }
 
     public function getTransactionSampleRate(): float
@@ -95,23 +82,24 @@ class Config
         return $value;
     }
 
-    public function getStackTraceLimit(): int
+    public function isApmSpanEventsEnabled(): bool
     {
-        $value = (int)$this->getString(self::XML_PATH_APM_STACK_TRACE_LIMIT, (string)self::DEFAULT_STACK_TRACE_LIMIT);
-
-        return $value > 0 ? $value : self::DEFAULT_STACK_TRACE_LIMIT;
+        return $this->isFlag(self::XML_PATH_APM_SPAN_EVENTS_ENABLED);
     }
 
-    public function getTimeoutSeconds(): int
+    public function isApmSpanLayoutEnabled(): bool
     {
-        $value = (int)$this->getString(self::XML_PATH_APM_TIMEOUT, (string)self::DEFAULT_TIMEOUT_SECONDS);
-
-        return $value > 0 ? $value : self::DEFAULT_TIMEOUT_SECONDS;
+        return $this->isFlag(self::XML_PATH_APM_SPAN_LAYOUT_ENABLED);
     }
 
-    public function isDbProfilerEnabled(): bool
+    public function isApmSpanPluginsEnabled(): bool
     {
-        return $this->isFlag(self::XML_PATH_APM_DB_PROFILER_ENABLED);
+        return $this->isFlag(self::XML_PATH_APM_SPAN_PLUGINS_ENABLED);
+    }
+
+    public function isApmSpanDiEnabled(): bool
+    {
+        return $this->isFlag(self::XML_PATH_APM_SPAN_DI_ENABLED);
     }
 
     public function isLogStreamingEnabled(): bool

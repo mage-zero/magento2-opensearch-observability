@@ -13,31 +13,23 @@
 
             <group id="observability" translate="label comment" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
                 <label>Observability Settings</label>
-                <comment><![CDATA[OpenSearch observability integration options for OTLP tracing and optional log streaming.]]></comment>
+                <comment><![CDATA[OpenSearch observability integration options for Datadog tracing hooks and optional log streaming.]]></comment>
 
                 <field id="apm_enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Enable Trace Integration</label>
+                    <label>Enable Datadog Custom Spans</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>Disabled by default. Enable to publish request spans via OTLP.</comment>
+                    <comment>Disabled by default. Requires ddtrace extension and `DD_*` runtime variables.</comment>
                 </field>
 
-                <field id="apm_server_url" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Trace Endpoint URL</label>
-                    <comment>Example: http://otel-collector:4318/v1/traces</comment>
-                    <depends>
-                        <field id="apm_enabled">1</field>
-                    </depends>
-                </field>
-
-                <field id="apm_service_name" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="apm_service_name" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Trace Service Name</label>
-                    <comment>Optional override. If empty, hostname/request host is used.</comment>
+                    <comment>Optional override. If empty, hostname/request host fallback is used.</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
                     </depends>
                 </field>
 
-                <field id="apm_environment" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="apm_environment" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Trace Environment</label>
                     <comment>Example: production, staging, development.</comment>
                     <depends>
@@ -45,43 +37,45 @@
                     </depends>
                 </field>
 
-                <field id="apm_secret_token" translate="label comment" type="obscure" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Trace Secret Token</label>
-                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
-                    <comment>Optional bearer token for secured trace endpoints.</comment>
-                    <depends>
-                        <field id="apm_enabled">1</field>
-                    </depends>
-                </field>
-
-                <field id="apm_transaction_sample_rate" translate="label comment" type="text" sortOrder="60" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="apm_transaction_sample_rate" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
                     <label>Trace Sample Rate</label>
-                    <comment>Decimal 0..1 (for example 0.5 = 50% sampling).</comment>
+                    <comment>Decimal 0..1. Used to set Datadog tracer sample rate at runtime.</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
                     </depends>
                 </field>
 
-                <field id="apm_stack_trace_limit" translate="label comment" type="text" sortOrder="70" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Trace Stack Trace Limit</label>
-                    <comment>Reserved for compatibility (default 1000).</comment>
-                    <depends>
-                        <field id="apm_enabled">1</field>
-                    </depends>
-                </field>
-
-                <field id="apm_timeout" translate="label comment" type="text" sortOrder="80" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Trace Timeout (seconds)</label>
-                    <comment>Request timeout for OTLP payload transport (default 10).</comment>
-                    <depends>
-                        <field id="apm_enabled">1</field>
-                    </depends>
-                </field>
-
-                <field id="apm_db_profiler_enabled" translate="label comment" type="select" sortOrder="90" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Enable DB Query Span Support</label>
+                <field id="apm_span_events_enabled" translate="label comment" type="select" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Span Event Dispatch</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>Enables DB span class usage when Magento DB profiler is configured.</comment>
+                    <comment>Capture `Magento\Framework\Event\Manager::dispatch` spans with event metadata.</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_span_layout_enabled" translate="label comment" type="select" sortOrder="60" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Span Layout Rendering</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Capture `Magento\Framework\View\Layout::renderElement` spans.</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_span_plugins_enabled" translate="label comment" type="select" sortOrder="70" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Span Plugin Resolution</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Capture plugin lookup spans. Disabled by default due volume overhead.</comment>
+                    <depends>
+                        <field id="apm_enabled">1</field>
+                    </depends>
+                </field>
+
+                <field id="apm_span_di_enabled" translate="label comment" type="select" sortOrder="80" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Span DI Object Manager</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Capture ObjectManager `create/get` spans. Disabled by default due high cardinality.</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
                     </depends>

@@ -1,16 +1,14 @@
 {
   "name": "mage-zero/magento2-opensearch-observability",
-  "description": "OpenSearch-focused observability module for Magento 2 with APM and optional stderr log streaming",
+  "description": "OpenSearch-focused observability module for Magento 2 with OTLP trace emission and optional stderr log streaming",
   "type": "magento2-module",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "license": [
     "OSL-3.0"
   ],
   "require": {
     "php": "^7.4 || ^8.0",
-    "magento/framework": ">=103.0.4 <104.0",
-    "nipwaayoni/elastic-apm-php-agent": "^8.1",
-    "php-http/guzzle7-adapter": "^1.0"
+    "magento/framework": ">=103.0.4 <104.0"
   },
   "autoload": {
     "files": [

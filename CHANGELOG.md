@@ -2,6 +2,14 @@
 
 All notable changes to `mage-zero/magento2-opensearch-observability` are documented in this file.
 
+## [1.1.0] - 2026-02-19
+
+- feat(tracing): switch profiler transport from Elastic APM intake to OpenTelemetry OTLP trace payloads.
+- feat(tracing): keep existing `MZ_APM_*` config surface while targeting OTLP collector endpoints (for deploy continuity).
+- refactor: remove `nipwaayoni/elastic-apm-php-agent` and `php-http/guzzle7-adapter` runtime dependencies.
+- test: update profiler unit tests for OTLP payload emission.
+- docs: update admin/readme wording to OTLP tracing semantics.
+
 ## [1.0.3] - 2026-02-19
 
 - fix(apm): retry profiler driver initialization when Magento ObjectManager is not ready during early bootstrap.

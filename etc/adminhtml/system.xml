@@ -13,24 +13,24 @@
 
             <group id="observability" translate="label comment" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
                 <label>Observability Settings</label>
-                <comment><![CDATA[OpenSearch observability integration options for APM and optional log streaming.]]></comment>
+                <comment><![CDATA[OpenSearch observability integration options for OTLP tracing and optional log streaming.]]></comment>
 
                 <field id="apm_enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>Enable APM Integration</label>
+                    <label>Enable Trace Integration</label>
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
-                    <comment>Disabled by default. Enable to allow Elastic APM transaction/span publishing.</comment>
+                    <comment>Disabled by default. Enable to publish request spans via OTLP.</comment>
                 </field>
 
                 <field id="apm_server_url" translate="label comment" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>APM Server URL</label>
-                    <comment>Example: http://apm-server:8200</comment>
+                    <label>Trace Endpoint URL</label>
+                    <comment>Example: http://otel-collector:4318/v1/traces</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
                     </depends>
                 </field>
 
                 <field id="apm_service_name" translate="label comment" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>APM Service Name</label>
+                    <label>Trace Service Name</label>
                     <comment>Optional override. If empty, hostname/request host is used.</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
@@ -38,7 +38,7 @@
                 </field>
 
                 <field id="apm_environment" translate="label comment" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>APM Environment</label>
+                    <label>Trace Environment</label>
                     <comment>Example: production, staging, development.</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
@@ -46,16 +46,16 @@
                 </field>
 
                 <field id="apm_secret_token" translate="label comment" type="obscure" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>APM Secret Token</label>
+                    <label>Trace Secret Token</label>
                     <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
-                    <comment>Optional token for secured APM endpoints.</comment>
+                    <comment>Optional bearer token for secured trace endpoints.</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
                     </depends>
                 </field>
 
                 <field id="apm_transaction_sample_rate" translate="label comment" type="text" sortOrder="60" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>APM Transaction Sample Rate</label>
+                    <label>Trace Sample Rate</label>
                     <comment>Decimal 0..1 (for example 0.5 = 50% sampling).</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
@@ -63,16 +63,16 @@
                 </field>
 
                 <field id="apm_stack_trace_limit" translate="label comment" type="text" sortOrder="70" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>APM Stack Trace Limit</label>
-                    <comment>Maximum frames captured for traces (default 1000).</comment>
+                    <label>Trace Stack Trace Limit</label>
+                    <comment>Reserved for compatibility (default 1000).</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
                     </depends>
                 </field>
 
                 <field id="apm_timeout" translate="label comment" type="text" sortOrder="80" showInDefault="1" showInWebsite="0" showInStore="0">
-                    <label>APM Timeout (seconds)</label>
-                    <comment>Request timeout for APM payload transport (default 10).</comment>
+                    <label>Trace Timeout (seconds)</label>
+                    <comment>Request timeout for OTLP payload transport (default 10).</comment>
                     <depends>
                         <field id="apm_enabled">1</field>
                     </depends>

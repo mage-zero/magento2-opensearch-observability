@@ -3,7 +3,7 @@
 `mage-zero/magento2-opensearch-observability` is an observability module for Magento 2.
 
 It provides:
-- Elastic APM transaction/span emission for Magento request profiling.
+- OpenTelemetry OTLP transaction/span emission for Magento request profiling.
 - Optional DB query spans (when Magento DB profiler is enabled).
 - Optional Magento log streaming as structured JSON via:
   - `stderr` (collector-managed), or
@@ -56,7 +56,7 @@ Go to `Stores > Configuration > MageZero > Observability Settings`.
 
 ### Shared/Operational Settings
 
-- APM server URL
+- OTLP traces endpoint URL
 - Service name override
 - Environment
 - Secret token (encrypted in config storage)
@@ -68,15 +68,15 @@ Go to `Stores > Configuration > MageZero > Observability Settings`.
 - Log stream minimum level
 - Direct endpoint URL/index/auth/timeout/TLS settings
 
-## Enabling APM Tracing
+## Enabling Trace Emission
 
-APM integration is implemented as a Magento profiler driver.
+Tracing integration is implemented as a Magento profiler driver.
 
 Profiler activation is required. If profiler is not enabled, no request traces are emitted.
 
-### 1. Configure APM options
+### 1. Configure tracing options
 
-You can configure APM options in either location:
+You can configure tracing options in either location:
 
 - Magento config (`Stores > Configuration > MageZero > Observability Settings`)
 - Optional bootstrap file `app/etc/apm.php` (legacy-compatible, loaded very early)
@@ -86,7 +86,7 @@ Example `app/etc/apm.php`:
 ```php
 <?php
 return [
-    'serverUrl' => 'http://apm-server:8200',
+    'serverUrl' => 'http://otel-collector:4318/v1/traces',
     'enabled' => true,
     'transactionSampleRate' => 1.0,
     'serviceName' => 'magento',
@@ -97,7 +97,7 @@ return [
 ];
 ```
 
-When both sources are present and the module APM switch is enabled, module config values are used; `app/etc/apm.php` remains an early-boot fallback.
+When both sources are present and the module tracing switch is enabled, module config values are used; `app/etc/apm.php` remains an early-boot fallback.
 
 ### 2. Enable profiler driver
 
@@ -172,8 +172,4 @@ See `.github/workflows/ci.yml` for the matrix and job definitions.
 
 ## Credits
 
-This module is inspired by:
-- `cmtickle/elastic-apm-magento` (initial Magento + Elastic APM integration approach)
-  - https://github.com/cmtickle/elastic-apm-magento
-
-Also builds on ideas from the Magento profiling ecosystem and Elastic APM PHP agent usage patterns.
+This module builds on ideas from the Magento profiling ecosystem and OpenTelemetry/OTLP span modeling patterns.

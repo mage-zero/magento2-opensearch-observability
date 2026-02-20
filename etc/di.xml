@@ -7,6 +7,12 @@
                 sortOrder="1"/>
     </type>
 
+    <type name="Magento\Framework\App\FrontController">
+        <plugin name="magezero_observability_register_datadog_hooks_front_controller"
+                type="MageZero\OpensearchObservability\Plugin\Apm\FrontControllerTracingPlugin"
+                sortOrder="1"/>
+    </type>
+
     <type name="Magento\Framework\Logger\Handler\System">
         <plugin name="magezero_observability_mirror_system_logs"
                 type="MageZero\OpensearchObservability\Plugin\Logger\HandlerMirrorPlugin"

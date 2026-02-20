@@ -93,7 +93,35 @@ In Magento admin (`Stores > Configuration > MageZero > Observability Settings`):
 - Enable `Datadog Custom Spans`
 - Toggle event/layout/plugin/DI spans as needed
 
+For early bootstrap registration, the module also supports environment overrides:
+
+- `MZ_APM_ENABLED`
+- `MZ_APM_SPAN_EVENTS_ENABLED`
+- `MZ_APM_SPAN_LAYOUT_ENABLED`
+- `MZ_APM_SPAN_PLUGINS_ENABLED`
+- `MZ_APM_SPAN_DI_ENABLED`
+
+When set, these env values take precedence and are applied before database-backed Magento config is fully loaded.
+
 No Magento profiler driver bootstrap is required.
+
+## OpenSearch Dashboards Trace View Tips
+
+For cleaner Magento waterfall views, save a query in Trace Analytics:
+
+- `trace.group.name = "magento.request"`
+
+This filters out generic request groups and keeps Magento request traces front-and-center.
+
+The module also adds request context metadata to custom spans. In OpenSearch these fields are visible as:
+
+- `span.attributes.magento@request@method`
+- `span.attributes.magento@request@host`
+- `span.attributes.magento@request@path`
+- `span.attributes.magento@request@uri`
+- `span.attributes.magento@request@url`
+
+Tip: add `span.attributes.url@full`, `span.attributes.http@request@method`, and `span.attributes.http@response@status_code` as trace detail fields alongside the Magento request fields above.
 
 ## Log Streaming Output Format
 

@@ -18,6 +18,11 @@ class InspectableDatadogHookRegistrar extends DatadogHookRegistrar
      */
     public $hooks = [];
 
+    /**
+     * @var array<string, string>|null
+     */
+    public $requestMetaOverride;
+
     protected function isTraceMethodAvailable(): bool
     {
         return $this->traceMethodAvailable;
@@ -27,5 +32,26 @@ class InspectableDatadogHookRegistrar extends DatadogHookRegistrar
     {
         $this->hooks[] = $className . '::' . $methodName;
         return true;
+    }
+
+    /**
+     * @param mixed $span
+     * @param array<string, string> $meta
+     */
+    public function applyDecorateSpan($span, string $name, array $meta): void
+    {
+        $this->decorateSpan($span, $name, $meta);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function getRequestMeta(): array
+    {
+        if ($this->requestMetaOverride !== null) {
+            return $this->requestMetaOverride;
+        }
+
+        return parent::getRequestMeta();
     }
 }

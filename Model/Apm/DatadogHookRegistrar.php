@@ -33,6 +33,11 @@ class DatadogHookRegistrar
      */
     private $registered = false;
 
+    /**
+     * @var array<string, string>|null
+     */
+    private $requestMeta;
+
     public function __construct(
         Config $config,
         EventConfigInterface $eventConfig,
@@ -48,9 +53,8 @@ class DatadogHookRegistrar
         if ($this->registered) {
             return;
         }
-        $this->registered = true;
 
-        if (!$this->config->isApmEnabled() || !$this->isTraceMethodAvailable()) {
+        if (!$this->isTraceMethodAvailable() || !$this->config->isApmEnabled()) {
             return;
         }
 
@@ -71,6 +75,8 @@ class DatadogHookRegistrar
         if ($this->config->isApmSpanDiEnabled()) {
             $this->registerDiSpans();
         }
+
+        $this->registered = true;
     }
 
     protected function isTraceMethodAvailable(): bool
@@ -290,6 +296,9 @@ class DatadogHookRegistrar
             'magento.version' => $this->magentoVersion,
             'deployment.environment' => $this->config->getApmEnvironment(),
         ];
+        foreach ($this->getRequestMeta() as $key => $value) {
+            $baseMeta[$key] = $value;
+        }
         foreach ($meta as $key => $value) {
             $baseMeta[$key] = (string)$value;
         }
@@ -299,6 +308,71 @@ class DatadogHookRegistrar
         }
 
         return $spanMeta;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function getRequestMeta(): array
+    {
+        if ($this->requestMeta !== null) {
+            return $this->requestMeta;
+        }
+
+        $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper(trim((string)$_SERVER['REQUEST_METHOD'])) : '';
+        $requestUri = isset($_SERVER['REQUEST_URI']) ? trim((string)$_SERVER['REQUEST_URI']) : '';
+        $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+
+        if ($method === '' && $requestUri === '' && $host === '') {
+            $this->requestMeta = [];
+
+            return $this->requestMeta;
+        }
+
+        $path = '';
+        if ($requestUri !== '') {
+            $parsedPath = parse_url($requestUri, PHP_URL_PATH);
+            if (is_string($parsedPath) && $parsedPath !== '') {
+                $path = $parsedPath;
+            }
+        }
+        if ($path === '' && $requestUri !== '') {
+            $path = strtok($requestUri, '?') ?: $requestUri;
+        }
+
+        $scheme = 'http';
+        $forwardedProto = trim((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+        if ($forwardedProto !== '') {
+            $scheme = strtolower(trim((string)explode(',', $forwardedProto)[0]));
+        } elseif (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') {
+            $scheme = 'https';
+        }
+
+        $requestUrl = '';
+        if ($host !== '' && $path !== '') {
+            $requestUrl = $scheme . '://' . $host . $path;
+        }
+
+        $meta = [];
+        if ($method !== '') {
+            $meta['magento.request.method'] = $method;
+        }
+        if ($host !== '') {
+            $meta['magento.request.host'] = $host;
+        }
+        if ($path !== '') {
+            $meta['magento.request.path'] = $path;
+        }
+        if ($requestUri !== '') {
+            $meta['magento.request.uri'] = $requestUri;
+        }
+        if ($requestUrl !== '') {
+            $meta['magento.request.url'] = $requestUrl;
+        }
+
+        $this->requestMeta = $meta;
+
+        return $this->requestMeta;
     }
 
     protected function resolveObserverCount(string $eventName): int

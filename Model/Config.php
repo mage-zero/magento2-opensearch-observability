@@ -310,6 +310,7 @@ class Config
 
     private function getEnvValue(string $name): ?string
     {
+        // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
         $value = getenv($name);
         if ($value === false) {
             return null;

@@ -5,6 +5,7 @@ All notable changes to `mage-zero/magento2-opensearch-observability` are documen
 ## [Unreleased]
 
 - feat(apm): enrich custom span metadata with request method/host/path/uri/url for easier filtering and trace triage in OpenSearch Dashboards.
+- refactor(apm): capture request context from front-controller request objects instead of parsing superglobals in the hook registrar.
 - docs: add Trace Analytics default filter guidance (`trace.group.name = "magento.request"`) and request URL field references.
 - test: add unit coverage for request metadata propagation in `DatadogHookRegistrar`.
 

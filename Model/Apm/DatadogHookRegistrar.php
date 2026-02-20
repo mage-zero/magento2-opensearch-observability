@@ -6,6 +6,7 @@ namespace MageZero\OpensearchObservability\Model\Apm;
 
 use MageZero\OpensearchObservability\Model\Config;
 use Magento\Framework\App\ProductMetadataInterface;
+use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Event\ConfigInterface as EventConfigInterface;
 use Throwable;
 
@@ -77,6 +78,24 @@ class DatadogHookRegistrar
         }
 
         $this->registered = true;
+    }
+
+    public function captureRequestContext(RequestInterface $request): void
+    {
+        $method = $this->readRequestMethod($request);
+        $host = $this->readRequestHost($request);
+        $uri = $this->readRequestUri($request);
+        $path = $this->readRequestPath($request, $uri);
+        $url = $this->buildRequestUrl($request, $host, $path);
+
+        $meta = [];
+        $this->appendMeta($meta, 'magento.request.method', $method);
+        $this->appendMeta($meta, 'magento.request.host', $host);
+        $this->appendMeta($meta, 'magento.request.path', $path);
+        $this->appendMeta($meta, 'magento.request.uri', $uri);
+        $this->appendMeta($meta, 'magento.request.url', $url);
+
+        $this->requestMeta = $meta;
     }
 
     protected function isTraceMethodAvailable(): bool
@@ -315,64 +334,95 @@ class DatadogHookRegistrar
      */
     protected function getRequestMeta(): array
     {
-        if ($this->requestMeta !== null) {
-            return $this->requestMeta;
+        return $this->requestMeta ?? [];
+    }
+
+    /**
+     * @param array<string, string> $meta
+     */
+    private function appendMeta(array &$meta, string $key, string $value): void
+    {
+        if ($value !== '') {
+            $meta[$key] = $value;
+        }
+    }
+
+    private function readRequestMethod(RequestInterface $request): string
+    {
+        if (!method_exists($request, 'getMethod')) {
+            return '';
         }
 
-        $method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper(trim((string)$_SERVER['REQUEST_METHOD'])) : '';
-        $requestUri = isset($_SERVER['REQUEST_URI']) ? trim((string)$_SERVER['REQUEST_URI']) : '';
-        $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+        return strtoupper(trim((string)$request->getMethod()));
+    }
 
-        if ($method === '' && $requestUri === '' && $host === '') {
-            $this->requestMeta = [];
-
-            return $this->requestMeta;
+    private function readRequestHost(RequestInterface $request): string
+    {
+        if (method_exists($request, 'getHttpHost')) {
+            return trim((string)$request->getHttpHost());
         }
 
-        $path = '';
-        if ($requestUri !== '') {
-            $parsedPath = parse_url($requestUri, PHP_URL_PATH);
-            if (is_string($parsedPath) && $parsedPath !== '') {
-                $path = $parsedPath;
+        if (!method_exists($request, 'getServer')) {
+            return '';
+        }
+
+        $httpHost = trim((string)$request->getServer('HTTP_HOST'));
+        if ($httpHost !== '') {
+            return $httpHost;
+        }
+
+        return trim((string)$request->getServer('SERVER_NAME'));
+    }
+
+    private function readRequestUri(RequestInterface $request): string
+    {
+        if (!method_exists($request, 'getRequestUri')) {
+            return '';
+        }
+
+        return trim((string)$request->getRequestUri());
+    }
+
+    private function readRequestPath(RequestInterface $request, string $uri): string
+    {
+        if (method_exists($request, 'getPathInfo')) {
+            $path = trim((string)$request->getPathInfo());
+            if ($path !== '') {
+                return $path;
             }
         }
-        if ($path === '' && $requestUri !== '') {
-            $path = strtok($requestUri, '?') ?: $requestUri;
+
+        if ($uri === '') {
+            return '';
         }
 
-        $scheme = 'http';
-        $forwardedProto = trim((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
-        if ($forwardedProto !== '') {
-            $scheme = strtolower(trim((string)explode(',', $forwardedProto)[0]));
-        } elseif (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') {
-            $scheme = 'https';
+        $parts = explode('?', $uri, 2);
+        return trim((string)$parts[0]);
+    }
+
+    private function buildRequestUrl(RequestInterface $request, string $host, string $path): string
+    {
+        if ($host === '' || $path === '') {
+            return '';
         }
 
-        $requestUrl = '';
-        if ($host !== '' && $path !== '') {
-            $requestUrl = $scheme . '://' . $host . $path;
+        return $this->readRequestScheme($request) . '://' . $host . $path;
+    }
+
+    private function readRequestScheme(RequestInterface $request): string
+    {
+        if (method_exists($request, 'isSecure') && $request->isSecure()) {
+            return 'https';
         }
 
-        $meta = [];
-        if ($method !== '') {
-            $meta['magento.request.method'] = $method;
-        }
-        if ($host !== '') {
-            $meta['magento.request.host'] = $host;
-        }
-        if ($path !== '') {
-            $meta['magento.request.path'] = $path;
-        }
-        if ($requestUri !== '') {
-            $meta['magento.request.uri'] = $requestUri;
-        }
-        if ($requestUrl !== '') {
-            $meta['magento.request.url'] = $requestUrl;
+        if (method_exists($request, 'getScheme')) {
+            $scheme = strtolower(trim((string)$request->getScheme()));
+            if ($scheme !== '') {
+                return $scheme;
+            }
         }
 
-        $this->requestMeta = $meta;
-
-        return $this->requestMeta;
+        return 'http';
     }
 
     protected function resolveObserverCount(string $eventName): int

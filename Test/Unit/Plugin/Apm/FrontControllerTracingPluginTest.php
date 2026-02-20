@@ -15,6 +15,8 @@ class FrontControllerTracingPluginTest extends TestCase
     public function testBeforeDispatchRegistersTracingHooksAndPreservesArguments(): void
     {
         $registrar = $this->createMock(DatadogHookRegistrar::class);
+        $registrar->expects($this->once())
+            ->method('captureRequestContext');
         $registrar->expects($this->once())->method('register');
 
         $plugin = new FrontControllerTracingPlugin($registrar);
@@ -28,4 +30,3 @@ class FrontControllerTracingPluginTest extends TestCase
         $this->assertSame([$request], $result);
     }
 }
-

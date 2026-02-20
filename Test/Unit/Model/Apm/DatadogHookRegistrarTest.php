@@ -6,6 +6,7 @@ namespace MageZero\OpensearchObservability\Test\Unit\Model\Apm;
 
 use MageZero\OpensearchObservability\Model\Config;
 use Magento\Framework\App\ProductMetadataInterface;
+use Magento\Framework\App\Request\Http as HttpRequest;
 use Magento\Framework\Event\ConfigInterface as EventConfigInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -123,12 +124,16 @@ class DatadogHookRegistrarTest extends TestCase
             'service_name' => 'web-presence',
             'environment' => 'development',
         ]);
-        $registrar->requestMetaOverride = [
-            'magento.request.method' => 'GET',
-            'magento.request.path' => '/customer/account/login',
-            'magento.request.uri' => '/customer/account/login/?from=menu',
-            'magento.request.url' => 'https://localhost.magezero.com/customer/account/login/',
-        ];
+        $request = $this->getMockBuilder(HttpRequest::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getMethod', 'getHttpHost', 'getRequestUri', 'getPathInfo', 'isSecure'])
+            ->getMock();
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getHttpHost')->willReturn('localhost.magezero.com');
+        $request->method('getRequestUri')->willReturn('/customer/account/login/?from=menu');
+        $request->method('getPathInfo')->willReturn('/customer/account/login');
+        $request->method('isSecure')->willReturn(true);
+        $registrar->captureRequestContext($request);
 
         $span = new \stdClass();
         $span->meta = [
@@ -152,7 +157,7 @@ class DatadogHookRegistrarTest extends TestCase
         $this->assertSame('GET', $span->meta['magento.request.method']);
         $this->assertSame('/customer/account/login', $span->meta['magento.request.path']);
         $this->assertSame('/customer/account/login/?from=menu', $span->meta['magento.request.uri']);
-        $this->assertSame('https://localhost.magezero.com/customer/account/login/', $span->meta['magento.request.url']);
+        $this->assertSame('https://localhost.magezero.com/customer/account/login', $span->meta['magento.request.url']);
         $this->assertSame('header.container', $span->meta['magento.layout.element']);
     }
 

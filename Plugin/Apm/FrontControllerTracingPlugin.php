@@ -26,9 +26,9 @@ class FrontControllerTracingPlugin
     public function beforeDispatch(FrontControllerInterface $subject, RequestInterface $request): array
     {
         unset($subject);
+        $this->hookRegistrar->captureRequestContext($request);
         $this->hookRegistrar->register();
 
         return [$request];
     }
 }
-

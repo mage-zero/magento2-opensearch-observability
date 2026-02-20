@@ -2,7 +2,7 @@
   "name": "mage-zero/magento2-opensearch-observability",
   "description": "OpenSearch-focused observability module for Magento 2 with Datadog ddtrace custom spans and optional stderr log streaming",
   "type": "magento2-module",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": [
     "OSL-3.0"
   ],

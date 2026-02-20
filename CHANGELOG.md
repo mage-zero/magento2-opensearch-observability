@@ -2,6 +2,11 @@
 
 All notable changes to `mage-zero/magento2-opensearch-observability` are documented in this file.
 
+## [2.0.1] - 2026-02-20
+
+- chore(release): bump module version to `2.0.1` after `2.0.0` Datadog cutover merge.
+- ci: run full Magento/PHP matrix validation from a fresh post-merge release branch.
+
 ## [2.0.0] - 2026-02-19
 
 - feat(apm): replace profiler-driver OTLP emitter with Datadog ddtrace hook registration at Magento bootstrap.

@@ -2,6 +2,25 @@
 
 All notable changes to `mage-zero/magento2-opensearch-observability` are documented in this file.
 
+## [Unreleased]
+
+- feat(apm): enrich custom span metadata with request method/host/path/uri/url for easier filtering and trace triage in OpenSearch Dashboards.
+- refactor(apm): capture request context from front-controller request objects instead of parsing superglobals in the hook registrar.
+- docs: add Trace Analytics default filter guidance (`trace.group.name = "magento.request"`) and request URL field references.
+- test: add unit coverage for request metadata propagation in `DatadogHookRegistrar`.
+
+## [2.0.2] - 2026-02-20
+
+- fix(apm): retry Datadog hook registration later in request lifecycle instead of locking after an early disabled read.
+- fix(apm): add front-controller registration hook so custom span registration still occurs when bootstrap-time config is not yet available.
+- feat(apm): allow `MZ_APM_*` / `DD_*` environment overrides for early custom span enablement, service name, environment, and sample rate.
+- test: add unit coverage for retry-after-early-disabled registration and front-controller tracing plugin behavior.
+
+## [2.0.1] - 2026-02-20
+
+- chore(release): bump module version to `2.0.1` after `2.0.0` Datadog cutover merge.
+- ci: run full Magento/PHP matrix validation from a fresh post-merge release branch.
+
 ## [2.0.0] - 2026-02-19
 
 - feat(apm): replace profiler-driver OTLP emitter with Datadog ddtrace hook registration at Magento bootstrap.

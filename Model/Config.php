@@ -9,6 +9,19 @@ use Magento\Framework\App\Config\ScopeConfigInterface;
 
 class Config
 {
+    private const ENV_MZ_APM_ENABLED = 'MZ_APM_ENABLED';
+    private const ENV_MZ_APM_SERVICE_NAME = 'MZ_APM_SERVICE_NAME';
+    private const ENV_MZ_APM_ENVIRONMENT = 'MZ_APM_ENVIRONMENT';
+    private const ENV_MZ_APM_SAMPLE_RATE = 'MZ_APM_SAMPLE_RATE';
+    private const ENV_MZ_APM_SPAN_EVENTS_ENABLED = 'MZ_APM_SPAN_EVENTS_ENABLED';
+    private const ENV_MZ_APM_SPAN_LAYOUT_ENABLED = 'MZ_APM_SPAN_LAYOUT_ENABLED';
+    private const ENV_MZ_APM_SPAN_PLUGINS_ENABLED = 'MZ_APM_SPAN_PLUGINS_ENABLED';
+    private const ENV_MZ_APM_SPAN_DI_ENABLED = 'MZ_APM_SPAN_DI_ENABLED';
+    private const ENV_DD_TRACE_ENABLED = 'DD_TRACE_ENABLED';
+    private const ENV_DD_SERVICE = 'DD_SERVICE';
+    private const ENV_DD_ENV = 'DD_ENV';
+    private const ENV_DD_TRACE_SAMPLE_RATE = 'DD_TRACE_SAMPLE_RATE';
+
     public const XML_PATH_APM_ENABLED = 'magezero/observability/apm_enabled';
     public const XML_PATH_APM_SERVICE_NAME = 'magezero/observability/apm_service_name';
     public const XML_PATH_APM_ENVIRONMENT = 'magezero/observability/apm_environment';
@@ -57,11 +70,26 @@ class Config
 
     public function isApmEnabled(): bool
     {
+        $envValue = $this->getEnvFlag(self::ENV_MZ_APM_ENABLED);
+        if ($envValue !== null) {
+            return $envValue;
+        }
+
+        $ddTraceEnabled = $this->getEnvFlag(self::ENV_DD_TRACE_ENABLED);
+        if ($ddTraceEnabled !== null) {
+            return $ddTraceEnabled;
+        }
+
         return $this->isFlag(self::XML_PATH_APM_ENABLED);
     }
 
     public function getApmEnvironment(): string
     {
+        $envValue = $this->getEnvValue(self::ENV_MZ_APM_ENVIRONMENT) ?? $this->getEnvValue(self::ENV_DD_ENV);
+        if ($envValue !== null) {
+            return $envValue;
+        }
+
         $environment = trim($this->getString(self::XML_PATH_APM_ENVIRONMENT, self::DEFAULT_APM_ENVIRONMENT));
 
         return $environment !== '' ? $environment : self::DEFAULT_APM_ENVIRONMENT;
@@ -69,7 +97,11 @@ class Config
 
     public function getTransactionSampleRate(): float
     {
-        $value = (float)$this->getString(self::XML_PATH_APM_TRANSACTION_SAMPLE_RATE, (string)self::DEFAULT_SAMPLE_RATE);
+        $sampleRateValue = $this->getEnvValue(self::ENV_MZ_APM_SAMPLE_RATE)
+            ?? $this->getEnvValue(self::ENV_DD_TRACE_SAMPLE_RATE)
+            ?? $this->getString(self::XML_PATH_APM_TRANSACTION_SAMPLE_RATE, (string)self::DEFAULT_SAMPLE_RATE);
+
+        $value = (float)$sampleRateValue;
 
         if ($value < 0.0) {
             return 0.0;
@@ -84,21 +116,41 @@ class Config
 
     public function isApmSpanEventsEnabled(): bool
     {
+        $envValue = $this->getEnvFlag(self::ENV_MZ_APM_SPAN_EVENTS_ENABLED);
+        if ($envValue !== null) {
+            return $envValue;
+        }
+
         return $this->isFlag(self::XML_PATH_APM_SPAN_EVENTS_ENABLED);
     }
 
     public function isApmSpanLayoutEnabled(): bool
     {
+        $envValue = $this->getEnvFlag(self::ENV_MZ_APM_SPAN_LAYOUT_ENABLED);
+        if ($envValue !== null) {
+            return $envValue;
+        }
+
         return $this->isFlag(self::XML_PATH_APM_SPAN_LAYOUT_ENABLED);
     }
 
     public function isApmSpanPluginsEnabled(): bool
     {
+        $envValue = $this->getEnvFlag(self::ENV_MZ_APM_SPAN_PLUGINS_ENABLED);
+        if ($envValue !== null) {
+            return $envValue;
+        }
+
         return $this->isFlag(self::XML_PATH_APM_SPAN_PLUGINS_ENABLED);
     }
 
     public function isApmSpanDiEnabled(): bool
     {
+        $envValue = $this->getEnvFlag(self::ENV_MZ_APM_SPAN_DI_ENABLED);
+        if ($envValue !== null) {
+            return $envValue;
+        }
+
         return $this->isFlag(self::XML_PATH_APM_SPAN_DI_ENABLED);
     }
 
@@ -200,6 +252,13 @@ class Config
      */
     public function getResolvedServiceName(array $server = []): string
     {
+        $envServiceName = $this->sanitizeServiceName(
+            (string)($this->getEnvValue(self::ENV_MZ_APM_SERVICE_NAME) ?? $this->getEnvValue(self::ENV_DD_SERVICE) ?? '')
+        );
+        if ($envServiceName !== '') {
+            return $envServiceName;
+        }
+
         $configured = $this->sanitizeServiceName($this->getString(self::XML_PATH_APM_SERVICE_NAME));
         if ($configured !== '') {
             return $configured;
@@ -229,6 +288,37 @@ class Config
     private function isFlag(string $path): bool
     {
         return $this->scopeConfig->isSetFlag($path);
+    }
+
+    private function getEnvFlag(string $name): ?bool
+    {
+        $value = $this->getEnvValue($name);
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = strtolower(trim($value));
+        if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+            return true;
+        }
+        if (in_array($normalized, ['0', 'false', 'no', 'off'], true)) {
+            return false;
+        }
+
+        return null;
+    }
+
+    private function getEnvValue(string $name): ?string
+    {
+        // phpcs:ignore Magento2.Functions.DiscouragedFunction.Discouraged
+        $value = getenv($name);
+        if ($value === false) {
+            return null;
+        }
+
+        $trimmed = trim((string)$value);
+
+        return $trimmed !== '' ? $trimmed : null;
     }
 
     private function getString(string $path, string $default = ''): string

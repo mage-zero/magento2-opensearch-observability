@@ -6,6 +6,7 @@ namespace MageZero\OpensearchObservability\Test\Unit\Model\Apm;
 
 use MageZero\OpensearchObservability\Model\Config;
 use Magento\Framework\App\ProductMetadataInterface;
+use Magento\Framework\App\Request\Http as HttpRequest;
 use Magento\Framework\Event\ConfigInterface as EventConfigInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -85,6 +86,79 @@ class DatadogHookRegistrarTest extends TestCase
         $registrar->register();
 
         $this->assertCount(2, $registrar->hooks);
+    }
+
+    public function testRegisterCanRetryAfterEarlyDisabledState(): void
+    {
+        $config = $this->createMock(Config::class);
+        $config->expects($this->exactly(2))
+            ->method('isApmEnabled')
+            ->willReturnOnConsecutiveCalls(false, true);
+        $config->method('isApmSpanEventsEnabled')->willReturn(true);
+        $config->method('isApmSpanLayoutEnabled')->willReturn(true);
+        $config->method('isApmSpanPluginsEnabled')->willReturn(false);
+        $config->method('isApmSpanDiEnabled')->willReturn(false);
+        $config->method('getTransactionSampleRate')->willReturn(1.0);
+        $config->method('getResolvedServiceName')->willReturn('magento');
+        $config->method('getApmEnvironment')->willReturn('production');
+
+        $eventConfig = $this->createMock(EventConfigInterface::class);
+        $productMetadata = $this->createMock(ProductMetadataInterface::class);
+        $productMetadata->method('getVersion')->willReturn('2.4.8-p3');
+
+        $registrar = new InspectableDatadogHookRegistrar($config, $eventConfig, $productMetadata);
+        $registrar->register();
+        $this->assertSame([], $registrar->hooks);
+
+        $registrar->register();
+        $this->assertSame([
+            'Magento\\Framework\\Event\\Manager::dispatch',
+            'Magento\\Framework\\View\\Layout::renderElement',
+        ], $registrar->hooks);
+    }
+
+    public function testDecorateSpanAddsResolvedRequestMetadata(): void
+    {
+        $registrar = $this->buildRegistrar([
+            'apm_enabled' => true,
+            'service_name' => 'web-presence',
+            'environment' => 'development',
+        ]);
+        $request = $this->getMockBuilder(HttpRequest::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['getMethod', 'getHttpHost', 'getRequestUri', 'getPathInfo', 'isSecure'])
+            ->getMock();
+        $request->method('getMethod')->willReturn('GET');
+        $request->method('getHttpHost')->willReturn('localhost.magezero.com');
+        $request->method('getRequestUri')->willReturn('/customer/account/login/?from=menu');
+        $request->method('getPathInfo')->willReturn('/customer/account/login');
+        $request->method('isSecure')->willReturn(true);
+        $registrar->captureRequestContext($request);
+
+        $span = new \stdClass();
+        $span->meta = [
+            'existing.key' => 'existing-value',
+        ];
+        $span->name = 'original';
+        $span->resource = 'original';
+        $span->type = 'web';
+        $span->service = 'unknown';
+
+        $registrar->applyDecorateSpan($span, 'magento.layout.render', [
+            'magento.layout.element' => 'header.container',
+        ]);
+
+        $this->assertSame('magento.layout.render', $span->name);
+        $this->assertSame('magento.layout.render', $span->resource);
+        $this->assertSame('custom', $span->type);
+        $this->assertSame('web-presence', $span->service);
+        $this->assertSame('existing-value', $span->meta['existing.key']);
+        $this->assertSame('development', $span->meta['deployment.environment']);
+        $this->assertSame('GET', $span->meta['magento.request.method']);
+        $this->assertSame('/customer/account/login', $span->meta['magento.request.path']);
+        $this->assertSame('/customer/account/login/?from=menu', $span->meta['magento.request.uri']);
+        $this->assertSame('https://localhost.magezero.com/customer/account/login', $span->meta['magento.request.url']);
+        $this->assertSame('header.container', $span->meta['magento.layout.element']);
     }
 
     /**

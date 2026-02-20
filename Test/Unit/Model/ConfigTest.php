@@ -11,6 +11,36 @@ use PHPUnit\Framework\TestCase;
 
 class ConfigTest extends TestCase
 {
+    /**
+     * @var array<int, string>
+     */
+    private const ENV_KEYS = [
+        'MZ_APM_ENABLED',
+        'MZ_APM_SERVICE_NAME',
+        'MZ_APM_ENVIRONMENT',
+        'MZ_APM_SAMPLE_RATE',
+        'MZ_APM_SPAN_EVENTS_ENABLED',
+        'MZ_APM_SPAN_LAYOUT_ENABLED',
+        'MZ_APM_SPAN_PLUGINS_ENABLED',
+        'MZ_APM_SPAN_DI_ENABLED',
+        'DD_TRACE_ENABLED',
+        'DD_SERVICE',
+        'DD_ENV',
+        'DD_TRACE_SAMPLE_RATE',
+    ];
+
+    protected function setUp(): void
+    {
+        $this->clearEnvOverrides();
+        parent::setUp();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->clearEnvOverrides();
+        parent::tearDown();
+    }
+
     public function testDefaultFlagsAreDisabled(): void
     {
         $scopeConfig = $this->buildScopeConfig([], []);
@@ -78,6 +108,42 @@ class ConfigTest extends TestCase
         $this->assertFalse($config->isApmSpanLayoutEnabled());
         $this->assertTrue($config->isApmSpanPluginsEnabled());
         $this->assertFalse($config->isApmSpanDiEnabled());
+    }
+
+    public function testApmFlagsCanBeReadFromEnvironmentBeforeConfigBootstrap(): void
+    {
+        $this->setEnv('MZ_APM_ENABLED', '1');
+        $this->setEnv('MZ_APM_SPAN_EVENTS_ENABLED', '1');
+        $this->setEnv('MZ_APM_SPAN_LAYOUT_ENABLED', '1');
+        $this->setEnv('MZ_APM_SPAN_PLUGINS_ENABLED', '0');
+        $this->setEnv('MZ_APM_SPAN_DI_ENABLED', '0');
+
+        $scopeConfig = $this->buildScopeConfig([], []);
+        $config = new Config($scopeConfig, $this->buildEncryptor());
+
+        $this->assertTrue($config->isApmEnabled());
+        $this->assertTrue($config->isApmSpanEventsEnabled());
+        $this->assertTrue($config->isApmSpanLayoutEnabled());
+        $this->assertFalse($config->isApmSpanPluginsEnabled());
+        $this->assertFalse($config->isApmSpanDiEnabled());
+    }
+
+    public function testResolvedServiceNameAndEnvironmentPreferDatadogEnvironmentVariables(): void
+    {
+        $this->setEnv('DD_SERVICE', 'dd service');
+        $this->setEnv('DD_ENV', 'staging');
+        $this->setEnv('DD_TRACE_SAMPLE_RATE', '0.42');
+
+        $scopeConfig = $this->buildScopeConfig([
+            Config::XML_PATH_APM_SERVICE_NAME => 'config-service',
+            Config::XML_PATH_APM_ENVIRONMENT => 'production',
+            Config::XML_PATH_APM_TRANSACTION_SAMPLE_RATE => '1.0',
+        ], []);
+        $config = new Config($scopeConfig, $this->buildEncryptor());
+
+        $this->assertSame('dd-service', $config->getResolvedServiceName(['HTTP_HOST' => 'example.com']));
+        $this->assertSame('staging', $config->getApmEnvironment());
+        $this->assertSame(0.42, $config->getTransactionSampleRate());
     }
 
     public function testLogTransportFallsBackToStderrWhenInvalid(): void
@@ -163,5 +229,20 @@ class ConfigTest extends TestCase
         );
 
         return $encryptor;
+    }
+
+    private function setEnv(string $key, string $value): void
+    {
+        putenv($key . '=' . $value);
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+    }
+
+    private function clearEnvOverrides(): void
+    {
+        foreach (self::ENV_KEYS as $key) {
+            putenv($key);
+            unset($_ENV[$key], $_SERVER[$key]);
+        }
     }
 }

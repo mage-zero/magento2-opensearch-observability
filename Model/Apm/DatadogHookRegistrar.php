@@ -6,6 +6,7 @@ namespace MageZero\OpensearchObservability\Model\Apm;
 
 use MageZero\OpensearchObservability\Model\Config;
 use Magento\Framework\App\ProductMetadataInterface;
+use Magento\Framework\App\RequestInterface;
 use Magento\Framework\Event\ConfigInterface as EventConfigInterface;
 use Throwable;
 
@@ -33,6 +34,11 @@ class DatadogHookRegistrar
      */
     private $registered = false;
 
+    /**
+     * @var array<string, string>|null
+     */
+    private $requestMeta;
+
     public function __construct(
         Config $config,
         EventConfigInterface $eventConfig,
@@ -48,9 +54,8 @@ class DatadogHookRegistrar
         if ($this->registered) {
             return;
         }
-        $this->registered = true;
 
-        if (!$this->config->isApmEnabled() || !$this->isTraceMethodAvailable()) {
+        if (!$this->isTraceMethodAvailable() || !$this->config->isApmEnabled()) {
             return;
         }
 
@@ -71,6 +76,26 @@ class DatadogHookRegistrar
         if ($this->config->isApmSpanDiEnabled()) {
             $this->registerDiSpans();
         }
+
+        $this->registered = true;
+    }
+
+    public function captureRequestContext(RequestInterface $request): void
+    {
+        $method = $this->readRequestMethod($request);
+        $host = $this->readRequestHost($request);
+        $uri = $this->readRequestUri($request);
+        $path = $this->readRequestPath($request, $uri);
+        $url = $this->buildRequestUrl($request, $host, $path);
+
+        $meta = [];
+        $this->appendMeta($meta, 'magento.request.method', $method);
+        $this->appendMeta($meta, 'magento.request.host', $host);
+        $this->appendMeta($meta, 'magento.request.path', $path);
+        $this->appendMeta($meta, 'magento.request.uri', $uri);
+        $this->appendMeta($meta, 'magento.request.url', $url);
+
+        $this->requestMeta = $meta;
     }
 
     protected function isTraceMethodAvailable(): bool
@@ -290,6 +315,9 @@ class DatadogHookRegistrar
             'magento.version' => $this->magentoVersion,
             'deployment.environment' => $this->config->getApmEnvironment(),
         ];
+        foreach ($this->getRequestMeta() as $key => $value) {
+            $baseMeta[$key] = $value;
+        }
         foreach ($meta as $key => $value) {
             $baseMeta[$key] = (string)$value;
         }
@@ -299,6 +327,102 @@ class DatadogHookRegistrar
         }
 
         return $spanMeta;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function getRequestMeta(): array
+    {
+        return $this->requestMeta ?? [];
+    }
+
+    /**
+     * @param array<string, string> $meta
+     */
+    private function appendMeta(array &$meta, string $key, string $value): void
+    {
+        if ($value !== '') {
+            $meta[$key] = $value;
+        }
+    }
+
+    private function readRequestMethod(RequestInterface $request): string
+    {
+        if (!method_exists($request, 'getMethod')) {
+            return '';
+        }
+
+        return strtoupper(trim((string)$request->getMethod()));
+    }
+
+    private function readRequestHost(RequestInterface $request): string
+    {
+        if (method_exists($request, 'getHttpHost')) {
+            return trim((string)$request->getHttpHost());
+        }
+
+        if (!method_exists($request, 'getServer')) {
+            return '';
+        }
+
+        $httpHost = trim((string)$request->getServer('HTTP_HOST'));
+        if ($httpHost !== '') {
+            return $httpHost;
+        }
+
+        return trim((string)$request->getServer('SERVER_NAME'));
+    }
+
+    private function readRequestUri(RequestInterface $request): string
+    {
+        if (!method_exists($request, 'getRequestUri')) {
+            return '';
+        }
+
+        return trim((string)$request->getRequestUri());
+    }
+
+    private function readRequestPath(RequestInterface $request, string $uri): string
+    {
+        if (method_exists($request, 'getPathInfo')) {
+            $path = trim((string)$request->getPathInfo());
+            if ($path !== '') {
+                return $path;
+            }
+        }
+
+        if ($uri === '') {
+            return '';
+        }
+
+        $parts = explode('?', $uri, 2);
+        return trim((string)$parts[0]);
+    }
+
+    private function buildRequestUrl(RequestInterface $request, string $host, string $path): string
+    {
+        if ($host === '' || $path === '') {
+            return '';
+        }
+
+        return $this->readRequestScheme($request) . '://' . $host . $path;
+    }
+
+    private function readRequestScheme(RequestInterface $request): string
+    {
+        if (method_exists($request, 'isSecure') && $request->isSecure()) {
+            return 'https';
+        }
+
+        if (method_exists($request, 'getScheme')) {
+            $scheme = strtolower(trim((string)$request->getScheme()));
+            if ($scheme !== '') {
+                return $scheme;
+            }
+        }
+
+        return 'http';
     }
 
     protected function resolveObserverCount(string $eventName): int

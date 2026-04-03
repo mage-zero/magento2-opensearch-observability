@@ -38,20 +38,24 @@ class HandlerMirrorPlugin
      */
     public function aroundHandle($subject, callable $proceed, $record)
     {
-        $result = $proceed($record);
-
         if (!$this->config->isLogStreamingEnabled()) {
-            return $result;
+            return $proceed($record);
         }
 
         $normalizedRecord = $this->normalizeRecord($record);
         if ($normalizedRecord === null) {
+            return $proceed($record);
+        }
+
+        if ($this->config->isDirectLogStreamEnabled()) {
+            $result = $proceed($record);
+            $this->stderrEmitter->emit($normalizedRecord, $this->resolveLogFile($subject));
             return $result;
         }
 
         $this->stderrEmitter->emit($normalizedRecord, $this->resolveLogFile($subject));
 
-        return $result;
+        return false;
     }
 
     /**

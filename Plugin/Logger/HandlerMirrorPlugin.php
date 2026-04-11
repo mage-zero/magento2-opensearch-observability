@@ -38,7 +38,8 @@ class HandlerMirrorPlugin
      */
     public function aroundHandle($subject, callable $proceed, $record)
     {
-        if (!$this->config->isLogStreamingEnabled()) {
+        $isEnabled = $this->safeIsLogStreamingEnabled();
+        if ($isEnabled !== true) {
             return $proceed($record);
         }
 
@@ -47,15 +48,18 @@ class HandlerMirrorPlugin
             return $proceed($record);
         }
 
-        if ($this->config->isDirectLogStreamEnabled()) {
+        if ($this->safeIsDirectLogStreamEnabled()) {
             $result = $proceed($record);
-            $this->stderrEmitter->emit($normalizedRecord, $this->resolveLogFile($subject));
+            $this->safeEmit($normalizedRecord, $this->resolveLogFile($subject));
             return $result;
         }
 
-        $this->stderrEmitter->emit($normalizedRecord, $this->resolveLogFile($subject));
+        if ($this->safeEmit($normalizedRecord, $this->resolveLogFile($subject))) {
+            return false;
+        }
 
-        return false;
+        // Fail-open when stream transport fails so logging never breaks request handling.
+        return $proceed($record);
     }
 
     /**
@@ -106,5 +110,36 @@ class HandlerMirrorPlugin
         }
 
         return 'application.log';
+    }
+
+    private function safeIsLogStreamingEnabled(): ?bool
+    {
+        try {
+            return $this->config->isLogStreamingEnabled();
+        } catch (\Throwable $exception) {
+            return null;
+        }
+    }
+
+    private function safeIsDirectLogStreamEnabled(): bool
+    {
+        try {
+            return $this->config->isDirectLogStreamEnabled();
+        } catch (\Throwable $exception) {
+            return false;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function safeEmit(array $record, string $logFile): bool
+    {
+        try {
+            $this->stderrEmitter->emit($record, $logFile);
+            return true;
+        } catch (\Throwable $exception) {
+            return false;
+        }
     }
 }

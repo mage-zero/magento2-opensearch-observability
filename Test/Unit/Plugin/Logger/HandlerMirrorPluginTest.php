@@ -94,4 +94,26 @@ class HandlerMirrorPluginTest extends TestCase
 
         $this->assertSame(['message' => 'kept'], $result);
     }
+
+    public function testAroundHandleFallsBackToOriginalHandlerWhenConfigReadFails(): void
+    {
+        $config = $this->createMock(Config::class);
+        $config->method('isLogStreamingEnabled')
+            ->willThrowException(new \RuntimeException('bootstrap config unavailable'));
+
+        $emitter = $this->createMock(StderrEmitter::class);
+        $emitter->expects($this->never())->method('emit');
+
+        $plugin = new HandlerMirrorPlugin($config, $emitter);
+
+        $result = $plugin->aroundHandle(
+            new \stdClass(),
+            static function ($record) {
+                return $record;
+            },
+            ['message' => 'fallback']
+        );
+
+        $this->assertSame(['message' => 'fallback'], $result);
+    }
 }

@@ -9,11 +9,17 @@ All notable changes to `mage-zero/magento2-opensearch-observability` are documen
 - docs: add Trace Analytics default filter guidance (`trace.group.name = "magento.request"`) and request URL field references.
 - test: add unit coverage for request metadata propagation in `DatadogHookRegistrar`.
 
-## [2.0.2] - 2026-02-20
+## [2.0.3] - 2026-04-11
+
+- fix(logging): make log mirroring fail-open when config/bootstrap reads fail so logger hooks cannot break Magento fatal error logging.
+- test: add unit coverage for config-read failure fallback path in `HandlerMirrorPlugin`.
+
+## [2.0.2] - 2026-04-03
 
 - fix(apm): retry Datadog hook registration later in request lifecycle instead of locking after an early disabled read.
 - fix(apm): add front-controller registration hook so custom span registration still occurs when bootstrap-time config is not yet available.
 - feat(apm): allow `MZ_APM_*` / `DD_*` environment overrides for early custom span enablement, service name, environment, and sample rate.
+- fix(logging): skip Magento file handlers entirely when stderr log streaming is enabled without direct transport.
 - test: add unit coverage for retry-after-early-disabled registration and front-controller tracing plugin behavior.
 
 ## [2.0.1] - 2026-02-20

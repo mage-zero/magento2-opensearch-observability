@@ -38,20 +38,28 @@ class HandlerMirrorPlugin
      */
     public function aroundHandle($subject, callable $proceed, $record)
     {
-        $result = $proceed($record);
-
-        if (!$this->config->isLogStreamingEnabled()) {
-            return $result;
+        $isEnabled = $this->safeIsLogStreamingEnabled();
+        if ($isEnabled !== true) {
+            return $proceed($record);
         }
 
         $normalizedRecord = $this->normalizeRecord($record);
         if ($normalizedRecord === null) {
+            return $proceed($record);
+        }
+
+        if ($this->safeIsDirectLogStreamEnabled()) {
+            $result = $proceed($record);
+            $this->safeEmit($normalizedRecord, $this->resolveLogFile($subject));
             return $result;
         }
 
-        $this->stderrEmitter->emit($normalizedRecord, $this->resolveLogFile($subject));
+        if ($this->safeEmit($normalizedRecord, $this->resolveLogFile($subject))) {
+            return false;
+        }
 
-        return $result;
+        // Fail-open when stream transport fails so logging never breaks request handling.
+        return $proceed($record);
     }
 
     /**
@@ -102,5 +110,36 @@ class HandlerMirrorPlugin
         }
 
         return 'application.log';
+    }
+
+    private function safeIsLogStreamingEnabled(): ?bool
+    {
+        try {
+            return $this->config->isLogStreamingEnabled();
+        } catch (\Throwable $exception) {
+            return null;
+        }
+    }
+
+    private function safeIsDirectLogStreamEnabled(): bool
+    {
+        try {
+            return $this->config->isDirectLogStreamEnabled();
+        } catch (\Throwable $exception) {
+            return false;
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function safeEmit(array $record, string $logFile): bool
+    {
+        try {
+            $this->stderrEmitter->emit($record, $logFile);
+            return true;
+        } catch (\Throwable $exception) {
+            return false;
+        }
     }
 }

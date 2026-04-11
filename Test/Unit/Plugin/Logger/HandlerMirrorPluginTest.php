@@ -16,6 +16,7 @@ class HandlerMirrorPluginTest extends TestCase
     {
         $config = $this->createMock(Config::class);
         $config->method('isLogStreamingEnabled')->willReturn(true);
+        $config->method('isDirectLogStreamEnabled')->willReturn(false);
 
         $emitter = $this->createMock(StderrEmitter::class);
         $emitter->expects($this->once())
@@ -35,8 +36,8 @@ class HandlerMirrorPluginTest extends TestCase
 
         $result = $plugin->aroundHandle(
             $subject,
-            static function ($record) {
-                return $record['message'];
+            static function () {
+                self::fail('stderr-only log streaming should bypass the original file handler');
             },
             [
                 'message' => 'A warning',
@@ -47,13 +48,14 @@ class HandlerMirrorPluginTest extends TestCase
             ]
         );
 
-        $this->assertSame('A warning', $result);
+        $this->assertFalse($result);
     }
 
     public function testAroundHandleSkipsMirroringWhenDisabled(): void
     {
         $config = $this->createMock(Config::class);
         $config->method('isLogStreamingEnabled')->willReturn(false);
+        $config->method('isDirectLogStreamEnabled')->willReturn(false);
 
         $emitter = $this->createMock(StderrEmitter::class);
         $emitter->expects($this->never())->method('emit');
@@ -69,5 +71,49 @@ class HandlerMirrorPluginTest extends TestCase
         );
 
         $this->assertSame(['message' => 'ignored'], $result);
+    }
+
+    public function testAroundHandleFallsBackToOriginalHandlerForDirectTransport(): void
+    {
+        $config = $this->createMock(Config::class);
+        $config->method('isLogStreamingEnabled')->willReturn(true);
+        $config->method('isDirectLogStreamEnabled')->willReturn(true);
+
+        $emitter = $this->createMock(StderrEmitter::class);
+        $emitter->expects($this->once())->method('emit');
+
+        $plugin = new HandlerMirrorPlugin($config, $emitter);
+
+        $result = $plugin->aroundHandle(
+            new \stdClass(),
+            static function ($record) {
+                return $record;
+            },
+            ['message' => 'kept']
+        );
+
+        $this->assertSame(['message' => 'kept'], $result);
+    }
+
+    public function testAroundHandleFallsBackToOriginalHandlerWhenConfigReadFails(): void
+    {
+        $config = $this->createMock(Config::class);
+        $config->method('isLogStreamingEnabled')
+            ->willThrowException(new \RuntimeException('bootstrap config unavailable'));
+
+        $emitter = $this->createMock(StderrEmitter::class);
+        $emitter->expects($this->never())->method('emit');
+
+        $plugin = new HandlerMirrorPlugin($config, $emitter);
+
+        $result = $plugin->aroundHandle(
+            new \stdClass(),
+            static function ($record) {
+                return $record;
+            },
+            ['message' => 'fallback']
+        );
+
+        $this->assertSame(['message' => 'fallback'], $result);
     }
 }
